@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const gravatar = require('gravatar');
 const bcrypt = require('bcryptjs');
+var nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const keys = require('../../config/keys');
 const passport = require('passport');
+var rn = require('random-number');
 
 // Load Input Validation
 const validateRegisterInput = require('../../validation/register');
@@ -153,6 +155,38 @@ router.post('/resetpassword', (req, res) => {
   });
 });
 
+
+
+router.post('/forgotpassword', (req, res) => {
+  const email = req.body.email;
+  var options = {
+  min:  1000
+, max:  9999
+, integer: true
+}
+
+
+  var newpassword =rn(options).toString();
+   console.log(newpassword)
+  // Find user by email
+  User.findOne({ email }).then(user => {
+    // Check for user
+    if (!user) {
+      errors.email = 'User not found';
+      return res.status(404).json(errors);
+    }
+    bcrypt.genSalt(10, (err, salt) => {
+      bcrypt.hash(newpassword, salt, (err, hash) => {
+        if (err) throw err;
+        var password = hash;
+        User.update({"email":email},{"password":password},function(err, doc){
+          if (err) return res.send(500, { error: err });
+          return res.send(`Password changed successfully and password is ${newpassword}`);
+        });
+      });
+    });
+  });
+});
 
 
 

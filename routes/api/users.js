@@ -9,6 +9,7 @@ const passport = require('passport');
 // Load Input Validation
 const validateRegisterInput = require('../../validation/register');
 const validateLoginInput = require('../../validation/login');
+const validateresetpasswordInput = require('../../validation/resetpassword');
 
 // Load User model
 const User = require('../../models/User');
@@ -108,6 +109,53 @@ router.post('/login', (req, res) => {
     });
   });
 });
+
+router.post('/resetpassword', (req, res) => {
+  const { errors, isValid } = validateresetpasswordInput(req.body);
+
+  // Check Validation
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
+  const email = req.body.email;
+  const password = req.body.oldpassword;
+  var newpassword =req.body.newpassword;
+
+  // Find user by email
+  User.findOne({ email }).then(user => {
+    // Check for user
+    if (!user) {
+      errors.email = 'User not found';
+      return res.status(404).json(errors);
+    }
+
+    // Check Password
+    bcrypt.compare(password, user.password).then(isMatch => {
+      if (isMatch) {
+          
+        bcrypt.genSalt(10, (err, salt) => {
+        bcrypt.hash(newpassword, salt, (err, hash) => {
+          if (err) throw err;
+          newpassword = hash;
+          User.update({"email":email},{"password":newpassword},function(err, doc){
+             if (err) return res.send(500, { error: err });
+             return res.send("Password changed successfully");
+        });
+      });
+       });
+      }
+         else {
+        errors.password = 'Password incorrect';
+        return res.status(400).json(errors);
+      }
+    });
+  });
+});
+
+
+
+
 
 // @route   GET api/users/current
 // @desc    Return current user
